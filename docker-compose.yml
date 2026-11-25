@@ -1,0 +1,9 @@
+# Alternativa a `npm run dev:db`: PostgreSQL con Docker
+services:
+  db:
+    image: postgres:16
+    environment: { POSTGRES_USER: ignis, POSTGRES_PASSWORD: ignis, POSTGRES_DB: ignis }
+    ports: ["5433:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+volumes:
+  pgdata:

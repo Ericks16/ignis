@@ -1,0 +1,567 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  OPERATIVO
+  TECNICO
+  CONSULTA
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         Role      @default(CONSULTA)
+  active       Boolean   @default(true)
+  mustChangePassword Boolean @default(false)
+  lastLoginAt  DateTime?
+  failedLogins Int       @default(0)
+  lockedUntil  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sessions     Session[]
+  audits       AuditLog[]
+  systemsResponsible InstalledSystem[]
+  technician   Technician?
+  followUpsResponsible FollowUp[] @relation("FollowUpResponsible")
+  followUpsCompleted FollowUp[] @relation("FollowUpCompletedBy")
+  followUpHistory FollowUpHistory[]
+  activities Activity[]
+  importBatches ImportBatch[]
+}
+
+model Session {
+  id         String   @id @default(uuid())
+  tokenHash  String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+  ip         String?
+  userAgent  String?
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action     String
+  entity     String?
+  entityId   String?
+  metadata   Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([actorId])
+  @@index([createdAt])
+}
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+enum EntityStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Client {
+  id             String        @id @default(uuid())
+  commercialName String
+  normalizedName String
+  legalName      String?
+  ruc            String?       @unique
+  address        String?
+  city           String?
+  province       String?
+  phone          String?
+  email          String?
+  status         EntityStatus  @default(ACTIVE)
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  contacts       ClientContact[]
+  installations  Installation[]
+
+  @@index([normalizedName])
+  @@index([status])
+  followUps FollowUp[]
+  activities Activity[]
+  importBatchId String?
+  importBatch ImportBatch? @relation(fields: [importBatchId], references: [id])
+}
+
+model ClientContact {
+  id                    String   @id @default(uuid())
+  clientId              String
+  client                Client   @relation(fields: [clientId], references: [id])
+  name                  String
+  position              String?
+  phone                 String?
+  email                 String?
+  // Un contacto solo recibe correos automáticos si se activa explícitamente.
+  receivesNotifications Boolean  @default(false)
+  active                Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([clientId])
+}
+
+model Installation {
+  id           String       @id @default(uuid())
+  clientId     String
+  client       Client       @relation(fields: [clientId], references: [id])
+  name         String
+  type         String?
+  address      String?
+  city         String?
+  province     String?
+  contactName  String?
+  contactPhone String?
+  notes        String?
+  status       EntityStatus @default(ACTIVE)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  systems      InstalledSystem[]
+
+  @@index([clientId])
+  @@index([status])
+  followUps FollowUp[]
+  activities Activity[]
+  importBatchId String?
+  importBatch ImportBatch? @relation(fields: [importBatchId], references: [id])
+}
+
+enum SystemRelation {
+  INSTALADO
+  MTTO
+}
+
+enum OperationalStatus {
+  OPERATIVO
+  CON_FALLAS
+  FUERA_DE_SERVICIO
+}
+
+/// Catálogo administrable (las 7 categorías iniciales se siembran en la migración).
+model SystemCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  systems     InstalledSystem[]
+}
+
+/// Catálogo de tipos de dispositivo (basado en las columnas de dispositivos del Excel).
+model EquipmentType {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String?  @unique
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  equipment   Equipment[]
+}
+
+model InstalledSystem {
+  id                  String            @id @default(uuid())
+  installationId      String
+  installation        Installation      @relation(fields: [installationId], references: [id])
+  categoryId          String
+  category            SystemCategory    @relation(fields: [categoryId], references: [id])
+  brand               String?
+  model               String?
+  serialNumber        String?
+  installedAt         DateTime?         @db.Date
+  location            String?
+  operationalStatus   OperationalStatus @default(OPERATIVO)
+  relation            SystemRelation?
+  description         String?
+  notes               String?
+  lastMaintenanceDate DateTime?         @db.Date
+  nextMaintenanceDate DateTime?         @db.Date
+  responsibleId       String?
+  responsible         User?             @relation(fields: [responsibleId], references: [id], onDelete: SetNull)
+  extra               Json?
+  status              EntityStatus      @default(ACTIVE)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  equipment           Equipment[]
+  maintenances        Maintenance[]
+
+  @@index([installationId])
+  @@index([categoryId])
+  @@index([nextMaintenanceDate])
+  @@index([status])
+  followUps FollowUp[]
+  importBatchId String?
+  importBatch ImportBatch? @relation(fields: [importBatchId], references: [id])
+}
+
+model Equipment {
+  id        String            @id @default(uuid())
+  systemId  String
+  system    InstalledSystem   @relation(fields: [systemId], references: [id])
+  typeId    String
+  type      EquipmentType     @relation(fields: [typeId], references: [id])
+  quantity  Int               @default(1)
+  label     String?
+  status    OperationalStatus @default(OPERATIVO)
+  notes     String?
+  active    Boolean           @default(true)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@index([systemId])
+  @@index([typeId])
+}
+
+enum MaintenanceStatus {
+  PROGRAMADO
+  PENDIENTE
+  EN_PROCESO
+  REALIZADO
+  CANCELADO
+  REPROGRAMADO
+}
+
+/// Catálogo configurable de tipos de mantenimiento.
+model MaintenanceType {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  description  String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  maintenances Maintenance[]
+}
+
+model Technician {
+  id        String       @id @default(uuid())
+  name      String
+  email     String?
+  phone     String?
+  position  String?
+  specialty String?
+  /// Iniciales usadas en las agendas del Excel (p. ej. JA, MC) para mapear la importación.
+  initials  String?
+  hireDate  DateTime?    @db.Date
+  notes     String?
+  status    EntityStatus @default(ACTIVE)
+  userId    String?      @unique
+  user      User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  assignments MaintenanceTechnician[]
+
+  @@index([status])
+  followUpAssignments FollowUpTechnician[]
+}
+
+model Maintenance {
+  id                  String            @id @default(uuid())
+  systemId            String
+  system              InstalledSystem   @relation(fields: [systemId], references: [id])
+  typeId              String
+  type                MaintenanceType   @relation(fields: [typeId], references: [id])
+  scheduledDate       DateTime          @db.Date
+  executedDate        DateTime?         @db.Date
+  /// La fija el usuario al registrar el trabajo; nunca se calcula por periodicidad.
+  nextMaintenanceDate DateTime?         @db.Date
+  status              MaintenanceStatus @default(PROGRAMADO)
+  description         String?
+  observations        String?
+  recommendations     String?
+  materials           String?
+  result              String?
+  rescheduledFromId   String?           @unique
+  rescheduledFrom     Maintenance?      @relation("Reschedule", fields: [rescheduledFromId], references: [id])
+  rescheduledTo       Maintenance?      @relation("Reschedule")
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  technicians         MaintenanceTechnician[]
+
+  @@index([systemId])
+  @@index([status, scheduledDate])
+  @@index([scheduledDate])
+  followUps FollowUp[]
+  activities Activity[]
+  notifications Notification[]
+  importBatchId String?
+  importBatch ImportBatch? @relation(fields: [importBatchId], references: [id])
+}
+
+model MaintenanceTechnician {
+  maintenanceId String
+  maintenance   Maintenance @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
+  technicianId  String
+  technician    Technician  @relation(fields: [technicianId], references: [id])
+
+  @@id([maintenanceId, technicianId])
+  @@index([technicianId])
+}
+
+enum Priority {
+  BAJA
+  MEDIA
+  ALTA
+  URGENTE
+}
+
+/// Estados de seguimiento administrables de forma controlada (los 7 iniciales son de sistema y no se pueden desactivar).
+model FollowUpStatus {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  /// Terminal = el seguimiento se cierra y se detienen sus recordatorios (FINALIZADO, CANCELADO).
+  isTerminal Boolean  @default(false)
+  isSystem   Boolean  @default(false)
+  sortOrder  Int      @default(0)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  followUps  FollowUp[]
+}
+
+model FollowUpType {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  followUps   FollowUp[]
+}
+
+model ActivityType {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  activities  Activity[]
+}
+
+model FollowUp {
+  id            String         @id @default(uuid())
+  clientId      String
+  client        Client         @relation(fields: [clientId], references: [id])
+  installationId String?
+  installation  Installation?  @relation(fields: [installationId], references: [id])
+  systemId      String?
+  system        InstalledSystem? @relation(fields: [systemId], references: [id])
+  maintenanceId String?
+  maintenance   Maintenance?   @relation(fields: [maintenanceId], references: [id])
+  title         String
+  description   String?
+  typeId        String
+  type          FollowUpType   @relation(fields: [typeId], references: [id])
+  statusId      String
+  status        FollowUpStatus @relation(fields: [statusId], references: [id])
+  priority      Priority       @default(MEDIA)
+  responsibleId String?
+  responsible   User?          @relation("FollowUpResponsible", fields: [responsibleId], references: [id], onDelete: SetNull)
+  startDate     DateTime       @db.Date
+  /// Fecha objetivo: base de los recordatorios por correo (Fase 6).
+  targetDate    DateTime?      @db.Date
+  completedAt   DateTime?
+  completedById String?
+  completedBy   User?          @relation("FollowUpCompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
+  nextAction    String?
+  observations  String?
+  remindersEnabled Boolean     @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  technicians   FollowUpTechnician[]
+  history       FollowUpHistory[]
+  activities    Activity[]
+
+  @@index([clientId])
+  @@index([statusId, targetDate])
+  @@index([responsibleId])
+  notifications Notification[]
+  importBatchId String?
+  importBatch ImportBatch? @relation(fields: [importBatchId], references: [id])
+}
+
+model FollowUpTechnician {
+  followUpId   String
+  followUp     FollowUp   @relation(fields: [followUpId], references: [id], onDelete: Cascade)
+  technicianId String
+  technician   Technician @relation(fields: [technicianId], references: [id])
+
+  @@id([followUpId, technicianId])
+  @@index([technicianId])
+}
+
+/// Historial de cambios de estado (quién, estado anterior, estado nuevo, cuándo y observaciones).
+model FollowUpHistory {
+  id          String   @id @default(uuid())
+  followUpId  String
+  followUp    FollowUp @relation(fields: [followUpId], references: [id], onDelete: Cascade)
+  fromName    String?
+  toName      String
+  changedById String?
+  changedBy   User?    @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  @@index([followUpId, createdAt])
+}
+
+model Activity {
+  id             String        @id @default(uuid())
+  clientId       String?
+  client         Client?       @relation(fields: [clientId], references: [id])
+  installationId String?
+  installation   Installation? @relation(fields: [installationId], references: [id])
+  followUpId     String?
+  followUp       FollowUp?     @relation(fields: [followUpId], references: [id])
+  maintenanceId  String?
+  maintenance    Maintenance?  @relation(fields: [maintenanceId], references: [id])
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  typeId         String
+  type           ActivityType  @relation(fields: [typeId], references: [id])
+  description    String
+  occurredAt     DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([clientId, occurredAt])
+  @@index([followUpId])
+  @@index([maintenanceId])
+}
+
+enum NotificationEntity {
+  FOLLOW_UP
+  MAINTENANCE
+}
+
+enum NotificationKind {
+  FIRST
+  WEEKLY
+  OVERDUE
+}
+
+enum NotificationStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+enum JobStatus {
+  RUNNING
+  OK
+  ERROR
+}
+
+/// Registro de cada recordatorio por correo. dedupeKey UNIQUE garantiza idempotencia
+/// (ejecuciones simultáneas, reinicios, reintentos y cron repetido no duplican envíos).
+model Notification {
+  id               String             @id @default(uuid())
+  entityType       NotificationEntity
+  followUpId       String?
+  followUp         FollowUp?          @relation(fields: [followUpId], references: [id])
+  maintenanceId    String?
+  maintenance      Maintenance?       @relation(fields: [maintenanceId], references: [id])
+  recipientEmail   String
+  recipientName    String?
+  kind             NotificationKind
+  /// Fecha (día) del calendario de recordatorios a la que corresponde este envío.
+  occurrenceDate   DateTime           @db.Date
+  dedupeKey        String             @unique
+  status           NotificationStatus @default(PENDING)
+  attempt          Int                @default(0)
+  /// Próximo intento (PENDING/FAILED con reintento programado). Nulo = no habrá más intentos.
+  nextAttemptAt    DateTime?
+  lockedAt         DateTime?
+  subject          String?
+  lastError        String?
+  provider         String?
+  providerMessageId String?
+  sentAt           DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([followUpId])
+  @@index([maintenanceId])
+  @@index([createdAt])
+}
+
+/// Registro de ejecuciones de tareas programadas (observabilidad del scheduler).
+model JobRun {
+  id         String    @id @default(uuid())
+  name       String
+  trigger    String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  status     JobStatus @default(RUNNING)
+  summary    Json?
+  error      String?
+
+  @@index([name, startedAt])
+}
+
+enum ImportStatus {
+  UPLOADED
+  PREVIEWED
+  IMPORTING
+  IMPORTED
+  CANCELLED
+  FAILED
+}
+
+/// Importación de Excel: conserva el archivo (solo hasta terminar), la configuración, el resultado
+/// y permite rastrear qué registros creó cada importación.
+model ImportBatch {
+  id          String       @id @default(uuid())
+  fileName    String
+  fileHash    String
+  fileSize    Int
+  status      ImportStatus @default(UPLOADED)
+  sheetName   String?
+  config      Json?
+  summary     Json?
+  result      Json?
+  error       String?
+  /// Bytes del XLSX subido (se borran al terminar o cancelar). El archivo original del usuario nunca se modifica.
+  fileData    Bytes?
+  createdById String?
+  createdBy   User?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  importedAt  DateTime?
+
+  clients       Client[]
+  installations Installation[]
+  systems       InstalledSystem[]
+  maintenances  Maintenance[]
+  followUps     FollowUp[]
+
+  @@index([fileHash])
+  @@index([createdAt])
+}

@@ -1,0 +1,39 @@
+# Blueprint de Render para la API. Los valores marcados sync:false se ingresan en el panel de Render (nunca en el repositorio).
+services:
+  - type: web
+    name: ignis-api
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm ci --include=dev && npm run prisma:generate -w apps/api && npm run build -w apps/api
+    # Aplica las migraciones pendientes (solo agrega; nunca borra datos) y arranca.
+    startCommand: npm run prisma:deploy -w apps/api && npm run start -w apps/api
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22
+      - key: APP_TIMEZONE
+        value: America/Guayaquil
+      - key: EMAIL_MODE
+        value: test            # cambiar a live solo tras el piloto (ver docs/DEPLOYMENT.md)
+      - key: EMAIL_PROVIDER
+        value: console
+      - key: DATABASE_URL     # cadena de conexión de Neon (con ?sslmode=require)
+        sync: false
+      - key: CORS_ORIGINS     # URL pública del frontend, p. ej. https://ignis.vercel.app
+        sync: false
+      - key: APP_URL          # igual que CORS_ORIGINS (enlaces de los correos)
+        sync: false
+      - key: CRON_SECRET      # mínimo 24 caracteres aleatorios
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: EMAIL_ALLOWED_RECIPIENTS
+        sync: false

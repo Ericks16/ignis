@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  api-and-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run prisma:generate -w apps/api
+      - name: Tipos (API y web)
+        run: |
+          npm run typecheck -w apps/api
+          npm run typecheck -w apps/web
+      - name: Pruebas (unitarias, integración y seguridad; PostgreSQL temporal)
+        run: npm test
+      - name: Build de producción
+        run: npm run build
+      - name: Auditoría de dependencias de producción (informativa)
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: api-and-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run prisma:generate -w apps/api
+      - name: Instalar Chromium para Playwright
+        run: npx playwright install --with-deps chromium
+      - name: E2E (entorno temporal, correo en modo prueba)
+        run: npm run test:e2e
+        env:
+          E2E_BROWSER: chromium
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-traces
+          path: apps/e2e/test-results

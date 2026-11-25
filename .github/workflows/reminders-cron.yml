@@ -1,0 +1,29 @@
+# Respaldo del cron de recordatorios. El disparador principal recomendado es un servicio externo (cron-job.org),
+# porque GitHub puede retrasar o saltar ejecuciones programadas. Este flujo es seguro por ser idempotente.
+name: Recordatorios (respaldo)
+
+on:
+  schedule:
+    - cron: '30 12 * * *'   # 12:30 UTC = 07:30 en Ecuador
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Llamar al endpoint del cron (reintenta por si la API está dormida)
+        env:
+          API_URL: ${{ secrets.IGNIS_API_URL }}
+          CRON_SECRET: ${{ secrets.IGNIS_CRON_SECRET }}
+        run: |
+          if [ -z "$API_URL" ] || [ -z "$CRON_SECRET" ]; then echo "Faltan los secretos IGNIS_API_URL / IGNIS_CRON_SECRET"; exit 1; fi
+          for i in 1 2 3 4; do
+            code=$(curl -s -o out.json -w '%{http_code}' -m 90 -X POST -H "x-cron-secret: $CRON_SECRET" "$API_URL/api/internal/cron/reminders" || echo 000)
+            echo "intento $i -> HTTP $code"
+            [ "$code" = "200" ] && { cat out.json; exit 0; }
+            sleep 30
+          done
+          exit 1
