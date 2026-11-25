@@ -4,7 +4,7 @@ services:
     name: ignis-api
     runtime: node
     plan: free
-    region: oregon
+    region: ohio           # la más cercana a Neon us-east-1 (Virginia)
     buildCommand: npm ci --include=dev && npm run prisma:generate -w apps/api && npm run build -w apps/api
     # Aplica las migraciones pendientes (solo agrega; nunca borra datos) y arranca.
     startCommand: npm run prisma:deploy -w apps/api && npm run start -w apps/api
