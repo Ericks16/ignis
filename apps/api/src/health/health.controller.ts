@@ -31,6 +31,8 @@ export class HealthController {
     else if (minutes === null) warnings.push('el scheduler aún no se ha ejecutado');
     else if (minutes > STALE_HOURS * 60) warnings.push('el scheduler está atrasado');
     if (last?.status === 'ERROR') warnings.push('la última ejecución del scheduler falló');
+    // Con correo real, un remitente sin configurar (valor por defecto @localhost) hace que el proveedor rechace todos los envíos.
+    if (env.EMAIL_MODE === 'live' && /@localhost\b/i.test(env.EMAIL_FROM)) warnings.push('EMAIL_FROM no está configurado con una dirección real: el proveedor rechazará los correos (recuperación de contraseña y recordatorios)');
     return {
       status: 'ok',
       database: 'up',
