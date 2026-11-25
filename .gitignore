@@ -10,3 +10,5 @@ test-results
 playwright-report
 coverage
 .neon
+# Solo el .env.production del frontend (contiene únicamente la URL pública de la API, nunca secretos)
+!apps/web/.env.production

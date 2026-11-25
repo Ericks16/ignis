@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './lib/auth';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
+import { ForgotPassword, Register, ResetPassword } from './pages/AccessPages';
+import { ChatPage } from './pages/ChatPage';
 import { Dashboard } from './pages/Dashboard';
 import { Users } from './pages/Users';
 import { Account } from './pages/Account';
@@ -27,7 +29,16 @@ import { ImportWizard } from './pages/ImportWizard';
 export function App() {
   const { user, loading } = useAuth();
   if (loading) return <div className="p-8 text-slate-500">Cargando…</div>;
-  if (!user) return <Login />;
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/registro" element={<Register />} />
+        <Route path="/olvide" element={<ForgotPassword />} />
+        <Route path="/restablecer" element={<ResetPassword />} />
+        <Route path="*" element={<Login />} />
+      </Routes>
+    );
+  }
   // Contraseña temporal: solo se permite la pantalla de cambio.
   if (user.mustChangePassword) {
     return (
@@ -52,6 +63,7 @@ export function App() {
         <Route path="seguimientos" element={<FollowUps />} />
         <Route path="seguimientos/:id" element={<FollowUpDetail />} />
         <Route path="actividades" element={<ActivitiesPage />} />
+        <Route path="chat" element={<ChatPage />} />
         {user.role !== 'TECNICO' && <Route path="notificaciones" element={<NotificationsPage />} />}
         {(user.role === 'ADMIN' || user.role === 'OPERATIVO') && <Route path="recordatorios" element={<SettingsPage />} />}
         {user.role === 'ADMIN' && <Route path="importaciones" element={<Imports />} />}

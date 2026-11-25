@@ -46,6 +46,9 @@ El usuario queda con cambio de contraseña obligatorio en el primer ingreso. No 
 3. Despliegue. Pruebe `https://<app>.vercel.app` → ingreso con el administrador.
 4. Nota: Vercel *Hobby* es para uso no comercial; si IGNIS lo usará comercialmente, evalúe **Cloudflare Pages** (proxy `/api` mediante una Pages Function o Worker equivalente a la reescritura) o un plan de pago. Verifique los términos vigentes.
 
+## 4b. Chat (WebSocket)
+Vercel no reenvía WebSockets, así que el chat se conecta **directo a la API de Render**. La URL pública de la API ya está en `apps/web/.env.production` (`VITE_WS_URL`) y en la política de seguridad de `apps/web/vercel.json` (`connect-src`). Si cambia el dominio de la API, actualice ambos archivos y vuelva a desplegar. En Render gratuito el primer mensaje tras un periodo de inactividad puede tardar mientras el servicio despierta.
+
 ## 5. Correo y recordatorios
 1. Cree la cuenta en Resend o Brevo y **verifique el dominio** (SPF y DKIM) del remitente. Sin dominio verificado los correos pueden ir a spam o ser rechazados.
 2. En Render defina `EMAIL_PROVIDER` (`resend` o `brevo`), la clave y `EMAIL_FROM`.

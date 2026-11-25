@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { HttpThrottlerGuard } from './common/throttler.guard';
 import { LoggerModule } from 'nestjs-pino';
 import { PrismaModule } from './prisma/prisma.service';
 import { AuditModule } from './audit/audit.service';
@@ -15,6 +16,8 @@ import { ImportsModule } from './imports/imports.module';
 import { ReportsModule } from './reports/reports.module';
 import { HealthController } from './health/health.controller';
 import { DashboardController } from './dashboard/dashboard.controller';
+import { AlertsController } from './dashboard/alerts.controller';
+import { ChatModule } from './chat/chat.module';
 import { CsrfGuard } from './common/csrf.guard';
 import { pinoHttpOptions } from './common/logging';
 import { loadEnv } from './config/env';
@@ -36,11 +39,12 @@ import { RolesGuard, SessionGuard } from './auth/auth.guards';
     RemindersModule,
     ImportsModule,
     ReportsModule,
+    ChatModule,
   ],
-  controllers: [HealthController, DashboardController],
+  controllers: [HealthController, DashboardController, AlertsController],
   providers: [
     // Orden: límite de peticiones → CSRF → sesión → roles
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: HttpThrottlerGuard },
     { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_GUARD, useClass: SessionGuard },
     { provide: APP_GUARD, useClass: RolesGuard },

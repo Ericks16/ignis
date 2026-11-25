@@ -1,3 +1,5 @@
+> Nota: el seguimiento **no depende del correo del cliente**; ver el apartado «Sin correo del cliente» al final.
+
 # Recordatorios por correo
 
 Estado: implementado y probado (Fase 6). Código en `apps/api/src/reminders` y `apps/api/src/email`.
@@ -84,3 +86,10 @@ Cabecera: x-cron-secret: <CRON_SECRET>
 - El logo en el correo es el texto «IGNIS» con estilos; un logo en imagen requiere alojar el archivo en una URL pública (se puede añadir en el despliegue).
 - Recuperación de contraseña por correo: pendiente de implementar sobre este mismo proveedor.
 - Antes de pasar a `live`: dominio propio con SPF/DKIM verificado en el proveedor y piloto con `EMAIL_ALLOWED_RECIPIENTS`.
+
+
+## Sin correo del cliente
+Que un cliente no tenga correo **no impide el seguimiento**:
+- Los recordatorios salen al **responsable** y a los **correos internos** configurados en *Recordatorios*; los contactos del cliente solo reciben correos si se habilita expresamente.
+- Independientemente del correo, todo seguimiento o mantenimiento vencido o próximo a vencer aparece en la **campana de alertas** del sistema (`GET /api/alerts`), con el alcance del usuario.
+- Si un seguimiento no tiene a quién avisar por correo (sin responsable activo, sin correos internos y sin contactos habilitados), el sistema lo cuenta como «sin destinatario» y avisa al personal en la campana para que asigne un responsable; el seguimiento sigue visible y gestionable.

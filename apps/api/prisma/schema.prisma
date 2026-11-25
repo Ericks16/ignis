@@ -22,6 +22,7 @@ model User {
   role         Role      @default(CONSULTA)
   active       Boolean   @default(true)
   mustChangePassword Boolean @default(false)
+  selfRegistered Boolean @default(false)
   lastLoginAt  DateTime?
   failedLogins Int       @default(0)
   lockedUntil  DateTime?
@@ -36,6 +37,8 @@ model User {
   followUpHistory FollowUpHistory[]
   activities Activity[]
   importBatches ImportBatch[]
+  resetTokens PasswordResetToken[]
+  chatMessages ChatMessage[]
 }
 
 model Session {
@@ -564,4 +567,29 @@ model ImportBatch {
 
   @@index([fileHash])
   @@index([createdAt])
+}
+
+/// Recuperación de contraseña: solo se guarda el hash del token; vence y se usa una sola vez.
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Chat interno. room = 'general' | 'followup:<id>' | 'maintenance:<id>'.
+model ChatMessage {
+  id        String   @id @default(uuid())
+  room      String
+  userId    String
+  body      String   @db.VarChar(1000)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([room, createdAt])
 }

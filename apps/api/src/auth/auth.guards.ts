@@ -14,6 +14,7 @@ export class SessionGuard implements CanActivate {
   constructor(private readonly reflector: Reflector, private readonly auth: AuthService) {}
 
   async canActivate(ctx: ExecutionContext) {
+    if (ctx.getType() !== 'http') return true; // los sockets se autentican con un ticket de un solo uso (ver ChatGateway)
     if (this.reflector.getAllAndOverride<boolean>(IS_PUBLIC, [ctx.getHandler(), ctx.getClass()])) return true;
     const req = ctx.switchToHttp().getRequest();
     const token = req.cookies?.[sessionCookieName()];
@@ -29,6 +30,7 @@ export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(ctx: ExecutionContext) {
+    if (ctx.getType() !== 'http') return true;
     const roles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [ctx.getHandler(), ctx.getClass()]);
     if (!roles?.length) return true;
     const user = ctx.switchToHttp().getRequest().user;

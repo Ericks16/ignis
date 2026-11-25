@@ -1,4 +1,6 @@
-import { BadRequestException, HttpException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { EMAIL_PROVIDER, EmailProvider } from '../email/email.provider';
+import { renderActionEmail } from '../email/email.templates';
 import * as bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -12,9 +14,62 @@ const DUMMY_HASH = bcrypt.hashSync('dummy-password-for-timing', 10);
 
 export const hashToken = (t: string) => createHash('sha256').update(t).digest('hex');
 
+const RESET_TTL_MINUTES = 60;
+
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService, private readonly audit: AuditService) {}
+  private readonly logger = new Logger('Auth');
+  constructor(private readonly prisma: PrismaService, private readonly audit: AuditService, @Inject(EMAIL_PROVIDER) private readonly email: EmailProvider) {}
+
+  /**
+   * Solicitud de acceso. La cuenta nace INACTIVA con rol de solo consulta; un administrador la revisa y activa.
+   * La respuesta es siempre la misma exista o no el correo (no se puede averiguar qué correos están registrados).
+   */
+  async register(name: string, email: string, password: string, ip?: string) {
+    const passwordHash = await bcrypt.hash(password, 12);
+    try {
+      const user = await this.prisma.user.create({ data: { name, email, passwordHash, role: 'CONSULTA', active: false, selfRegistered: true } });
+      await this.audit.log({ actorId: user.id, action: 'auth.register_requested', entity: 'User', entityId: user.id, ip });
+    } catch (e) {
+      if ((e as { code?: string }).code !== 'P2002') throw e; // correo ya registrado: se ignora en silencio
+      await this.audit.log({ action: 'auth.register_duplicate', entity: 'User', ip });
+    }
+  }
+
+  /** Genera un enlace de un solo uso (vence en 1 h) y lo envía por correo. Responde igual exista o no la cuenta. */
+  async forgotPassword(email: string, ip?: string) {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user || !user.active) { await this.audit.log({ action: 'auth.forgot_unknown', entity: 'User', ip }); return; }
+    const token = randomBytes(32).toString('base64url');
+    await this.prisma.$transaction([
+      this.prisma.passwordResetToken.deleteMany({ where: { userId: user.id, usedAt: null } }),
+      this.prisma.passwordResetToken.create({ data: { userId: user.id, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + RESET_TTL_MINUTES * 60_000) } }),
+    ]);
+    const url = `${loadEnv().APP_URL.replace(/\/$/, '')}/restablecer?token=${token}`;
+    const mail = renderActionEmail({
+      title: 'Restablecer su contraseña',
+      intro: `Recibimos una solicitud para restablecer la contraseña de su cuenta. El enlace vence en ${RESET_TTL_MINUTES} minutos y solo sirve una vez.`,
+      buttonLabel: 'Elegir nueva contraseña', url,
+      footer: 'Si usted no lo solicitó, ignore este correo: su contraseña no cambiará.',
+    });
+    try {
+      await this.email.send({ to: user.email, subject: '[IGNIS] Restablecer su contraseña', html: mail.html, text: mail.text, idempotencyKey: `reset-${hashToken(token).slice(0, 24)}` });
+    } catch (e) {
+      this.logger.error(`No se pudo enviar el correo de recuperación: ${(e as Error).message}`); // no se revela al solicitante
+    }
+    await this.audit.log({ actorId: user.id, action: 'auth.forgot_requested', entity: 'User', entityId: user.id, ip });
+  }
+
+  async resetPassword(token: string, newPassword: string, ip?: string) {
+    const row = await this.prisma.passwordResetToken.findUnique({ where: { tokenHash: hashToken(token) }, include: { user: true } });
+    if (!row || row.usedAt || row.expiresAt < new Date() || !row.user.active) throw new BadRequestException('El enlace no es válido o ya venció. Solicite uno nuevo.');
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: row.userId }, data: { passwordHash: await bcrypt.hash(newPassword, 12), mustChangePassword: false, failedLogins: 0, lockedUntil: null } }),
+      this.prisma.passwordResetToken.update({ where: { id: row.id }, data: { usedAt: new Date() } }),
+      this.prisma.session.deleteMany({ where: { userId: row.userId } }),
+    ]);
+    await this.audit.log({ actorId: row.userId, action: 'auth.password_reset_by_link', entity: 'User', entityId: row.userId, ip });
+  }
 
   async login(email: string, password: string, ip?: string, userAgent?: string) {
     const user = await this.prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });

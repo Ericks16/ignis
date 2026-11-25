@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
+import { MessageSquare } from 'lucide-react';
 import { api, canWrite, dateOnly, type FollowUp, type FollowUpHistoryItem, type FollowUpStatus } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { ActivityFeed } from '../components/ActivityFeed';
@@ -74,12 +75,15 @@ export function FollowUpDetail() {
             <Link className="text-teal-700 hover:underline" to={`/clientes/${f.client.id}`}>{f.client.commercialName}</Link>
           </div>
         </div>
+        <div className="flex flex-wrap gap-2">
+          <Link className="btn-secondary" to={`/chat?room=followup:${f.id}`}><MessageSquare aria-hidden size={16} />Chat del seguimiento</Link>
         {write && (
           <div className="flex gap-2">
             {!closed && <button className="btn-secondary" onClick={() => setModal('edit')}>Editar</button>}
             <button className={closed ? 'btn-secondary' : 'btn-primary'} onClick={() => setModal('status')}>{closed ? 'Reabrir' : 'Cambiar estado'}</button>
           </div>
         )}
+        </div>
       </div>
 
       {closed && <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-ok">Seguimiento cerrado{f.completedAt ? ` el ${fmt(f.completedAt)}` : ''}{f.completedBy ? ` por ${f.completedBy.name}` : ''}. No genera recordatorios.</p>}

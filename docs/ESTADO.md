@@ -97,6 +97,15 @@ Actualizado: 2026-11-24
 - No verificado: el workflow de CI nunca se ejecutó (no hay repositorio GitHub); el E2E en Linux/Chromium tampoco; los límites vigentes de las capas gratuitas deben confirmarse al crear las cuentas (una búsqueda mostró que Render cambió su ancho de banda incluido y que su Postgres gratuito caduca, por eso se usa Neon; Vercel Hobby es solo uso no comercial).
 - Sin dominio propio aún: necesario para SPF/DKIM y correos reales.
 
+## Completado (Fase 11 — Cierre de la rúbrica del primer bimestre)
+- **Registro con aprobación**: `POST /api/auth/register` crea una cuenta inactiva de solo consulta; el administrador la aprueba en *Usuarios* («Solicitud pendiente» / «Aprobar acceso»).
+- **Recuperación de contraseña**: `/olvide` → correo con enlace de un solo uso (60 min, solo se guarda el hash, cierra todas las sesiones) → `/restablecer`. Requiere correo en modo *live* para entregarse de verdad; en modo prueba solo se registra y el administrador puede restablecer la clave.
+- **Seguimiento sin depender del correo del cliente**: los recordatorios salen al responsable y a los correos internos; además la **campana de alertas** (`GET /api/alerts`) muestra todo lo vencido/por vencer del alcance del usuario, y avisa al personal de los seguimientos sin destinatario de correo.
+- **Chat en tiempo real con Socket.IO** (WebSocket): sala general y una por seguimiento/mantenimiento con permiso por alcance; ticket de un solo uso, mensajes guardados, límites de longitud y velocidad. En producción el navegador se conecta directo a Render (`VITE_WS_URL`), porque Vercel no reenvía WebSockets.
+- Documentos: [REQUISITOS.md](REQUISITOS.md) (45 RF + RNF + historias), [ARCHITECTURE.md](ARCHITECTURE.md) con diagramas Mermaid, [PROYECTO_IB.md](PROYECTO_IB.md) (introducción, objetivos, cronograma, mapa de la rúbrica y guion de demo).
+- Pruebas: **188 de API** (nuevas: `access-recovery`, `chat`, matriz de permisos ampliada) + **16 E2E** (chat entre dos navegadores, registro y aprobación, recuperación, campana). Todas pasan en local.
+- Pendiente de ustedes: repositorio **público** con commits de todos los integrantes, declaración de uso de IA, y activar un proveedor de correo (Resend/Brevo) si quieren que el correo de recuperación y los recordatorios se envíen de verdad.
+
 ## Pendiente
 - Recuperación de contraseña por correo → Fase 6 (requiere EmailProvider).
 - Pestañas de mantenimientos, seguimientos y actividades en el detalle del cliente → Fases 4 y 5.

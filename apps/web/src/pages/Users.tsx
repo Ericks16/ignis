@@ -89,10 +89,14 @@ export function Users() {
                     {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
                   </select>
                 </td>
-                <td className="p-3"><span className={`badge ${u.active ? 'bg-green-100 text-ok' : 'bg-slate-200 text-slate-600'}`}>{u.active ? 'Activo' : 'Inactivo'}</span></td>
+                <td className="p-3">
+                  {!u.active && u.selfRegistered && !u.lastLoginAt
+                    ? <span className="badge bg-orange-100 text-accent-dark">Solicitud pendiente</span>
+                    : <span className={`badge ${u.active ? 'bg-green-100 text-ok' : 'bg-slate-200 text-slate-600'}`}>{u.active ? 'Activo' : 'Inactivo'}</span>}
+                </td>
                 <td className="space-x-2 p-3 text-right">
                   <button className="btn-secondary py-1" onClick={() => setResetting(u)}>Restablecer clave</button>
-                  <button className="btn-secondary py-1" onClick={() => patch.mutate({ id: u.id, body: { active: !u.active } })}>{u.active ? 'Desactivar' : 'Reactivar'}</button>
+                  <button className={!u.active && u.selfRegistered && !u.lastLoginAt ? 'btn-primary py-1' : 'btn-secondary py-1'} onClick={() => patch.mutate({ id: u.id, body: { active: !u.active } })}>{u.active ? 'Desactivar' : (u.selfRegistered && !u.lastLoginAt ? 'Aprobar acceso' : 'Reactivar')}</button>
                 </td>
               </tr>
             ))}

@@ -22,6 +22,9 @@ Resumen de los controles implementados, cómo se verifican y lo que queda como r
 | Archivos subidos | Solo `.xlsx`, ≤ 10 MB, firma ZIP, inspección del directorio central **sin descomprimir** (máx. 2 000 entradas y 120 MB descomprimidos: protege contra «bombas zip»), lectura en memoria, el original nunca se modifica | `security.spec.ts`, `imports.spec.ts` |
 | Importación | Vista previa obligatoria, transacción todo-o-nada, solo agrega, trazabilidad por lote; claves `__proto__`/`constructor` no contaminan | `imports.spec.ts`, `security.spec.ts` |
 | Secretos en logs | Se redactan cookies, `Authorization`, `x-cron-secret`, `x-api-key` y contraseñas | `security.spec.ts` |
+| Registro | La solicitud crea una cuenta **inactiva** de solo consulta que un administrador aprueba; ignora campos como rol o estado; respuesta idéntica exista o no el correo | `access-recovery.spec.ts` |
+| Recuperación de clave | Token aleatorio de 256 bits, solo se guarda su hash, un solo uso, vence en 60 min, invalida el anterior y cierra todas las sesiones; respuesta neutra para correos desconocidos; con límite de peticiones | `access-recovery.spec.ts`, `security.spec.ts` |
+| Chat (WebSocket) | Ticket de un solo uso (60 s) obtenido con la sesión; sala validada en cada mensaje según el alcance del usuario; límite de longitud y de velocidad; el HTML se trata como texto | `chat.spec.ts` |
 | Correo | `EMAIL_MODE=test` por defecto (nunca envía); en vivo exige proveedor y claves; lista de destinatarios permitidos para pilotos; sin datos hardcodeados | `reminders.spec.ts` |
 | Cron | Endpoint con `x-cron-secret` (≥ 24 caracteres), sin sesión; ejecuciones idempotentes y registradas | `reminders.spec.ts` |
 | Auditoría | Acciones relevantes (login, cambios, importaciones) con actor, IP y fecha | `auth-users.spec.ts` |
@@ -59,6 +62,6 @@ Recomendación: activar Dependabot o `npm audit` en el CI (Fase 10).
 ## Cómo ejecutar las pruebas de seguridad
 
 ```powershell
-npm test                      # unitarias + integración + seguridad (170 pruebas)
+npm test                      # unitarias + integración + seguridad (188 pruebas)
 npm run test:e2e              # navegador real (Microsoft Edge) contra un entorno temporal
 ```

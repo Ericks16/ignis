@@ -5,7 +5,8 @@ PostgreSQL gestionado con Prisma. Fuente de verdad: [`apps/api/prisma/schema.pri
 ## Modelos
 | Grupo | Modelos |
 |---|---|
-| Acceso y auditoría | `User` (rol, bloqueo, cambio de clave obligatorio), `Session` (hash del token, vencimiento), `AuditLog`, `Setting` (configuración de recordatorios) |
+| Acceso y auditoría | `User` (rol, bloqueo, cambio de clave obligatorio, solicitud de acceso), `Session` (hash del token, vencimiento), `PasswordResetToken` (hash del enlace, vencimiento, un solo uso), `AuditLog`, `Setting` (configuración de recordatorios) |
+| Chat | `ChatMessage` (sala `general`, `followup:<id>` o `maintenance:<id>`, autor, texto ≤ 1000, fecha) |
 | Clientes | `Client`, `ClientContact` (flag `receivesNotifications`), `Installation` |
 | Sistemas | `SystemCategory`, `EquipmentType`, `InstalledSystem`, `Equipment` |
 | Mantenimientos | `MaintenanceType`, `Technician`, `Maintenance`, `MaintenanceTechnician` |

@@ -61,10 +61,11 @@ const MATRIX: [string, string, string][] = [
   ['POST', 'imports/:id/confirm', A], ['POST', 'imports/:id/cancel', A], ['GET', 'imports/:id/report.xlsx', A],
   // El reporte de prueba es «clients» (solo personal interno); los reportes abiertos al técnico se cubren en reports.spec.ts.
   ['GET', 'reports', ALL], ['GET', 'reports/:key', STAFF], ['GET', 'reports/:key/export', STAFF],
-  ['GET', 'dashboard/summary', ALL],
+  ['GET', 'dashboard/summary', ALL], ['GET', 'alerts', ALL],
+  ['POST', 'chat/ticket', ALL], ['GET', 'chat/messages', ALL],
 ];
 /** Rutas que no usan la sesión de usuario (cada una tiene su propia protección). */
-const PUBLIC_ROUTES = ['POST auth/login', 'POST internal/cron/reminders'];
+const PUBLIC_ROUTES = ['POST auth/login', 'POST auth/register', 'POST auth/forgot-password', 'POST auth/reset-password', 'POST internal/cron/reminders'];
 /** Autenticadas para cualquier rol (no dependen del rol). */
 const ANY_AUTH = ['GET auth/me', 'POST auth/logout', 'POST auth/change-password'];
 
@@ -147,6 +148,22 @@ describe('Seguridad: permisos por rol en TODAS las rutas', () => {
     await http.post('/api/auth/login').set(H).send({ email: 'nadie@x.test', password: 'x' }).expect(401);
     await http.post('/api/internal/cron/reminders').expect(401); // sin secreto
     await http.get('/health').expect(200);
+    // registro y recuperación: sin sesión, pero con protección CSRF y validación estricta
+    await http.post('/api/auth/register').send({ name: 'Ana Gómez', email: 'a@x.test', password: PASS }).expect(403);
+    await http.post('/api/auth/forgot-password').send({ email: 'a@x.test' }).expect(403);
+    await http.post('/api/auth/reset-password').send({ token: 'x'.repeat(30), newPassword: PASS }).expect(403);
+    await http.post('/api/auth/forgot-password').set(H).send({ email: 'no-es-correo' }).expect(400);
+    await http.post('/api/auth/reset-password').set(H).send({ token: 'x'.repeat(30), newPassword: 'débil' }).expect(400);
+  });
+
+  it('el registro y la recuperación de contraseña también tienen límite de peticiones', async () => {
+    const limited = await makeApp({ RATE_LIMIT_LOGIN: '3', RATE_LIMIT_GLOBAL: '1000' });
+    try {
+      const http = request(limited.app.getHttpServer());
+      const codes: number[] = [];
+      for (let i = 0; i < 5; i++) codes.push((await http.post('/api/auth/forgot-password').set(H).send({ email: 'nadie@x.test' })).status);
+      expect(codes).toEqual([202, 202, 202, 429, 429]);
+    } finally { await limited.close(); }
   });
 
   it('escalada de privilegios: un usuario sin rol de administrador no puede darse ni dar permisos', async () => {

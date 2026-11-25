@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
+import { MessageSquare } from 'lucide-react';
 import { api, canWrite, dateOnly, M_OPEN, type Maintenance } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { Field } from '../components/ui';
@@ -120,6 +121,7 @@ export function MaintenanceDetail() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link className="btn-secondary" to={`/chat?room=maintenance:${m.id}`}><MessageSquare aria-hidden size={16} />Chat del mantenimiento</Link>
           {open && fieldStaff && m.status !== 'EN_PROCESO' && <button className="btn-secondary" onClick={() => act.mutate({ path: 'start' })}>Iniciar trabajo</button>}
           {open && fieldStaff && <button className="btn-primary" onClick={() => setModal('complete')}>Registrar como realizado</button>}
           {(open || m.status === 'REALIZADO') && fieldStaff && <button className="btn-secondary" onClick={() => setModal('notes')}>Observaciones y resultados</button>}

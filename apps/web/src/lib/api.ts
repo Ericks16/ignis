@@ -30,7 +30,7 @@ export const ROLE_LABEL: Record<Role, string> = {
 };
 
 export interface Me { id: string; email: string; name: string; role: Role; mustChangePassword: boolean }
-export interface UserRow extends Me { active: boolean; lastLoginAt: string | null; createdAt: string }
+export interface UserRow extends Me { active: boolean; selfRegistered?: boolean; lastLoginAt: string | null; createdAt: string }
 
 export interface Page<T> { items: T[]; total: number; page: number; pageSize: number }
 export type Status = 'ACTIVE' | 'INACTIVE';

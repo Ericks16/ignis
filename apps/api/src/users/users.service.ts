@@ -9,7 +9,7 @@ import { CreateUserDto, ListUsersQuery, UpdateUserDto } from './dto/users.dto';
 
 /** Campos públicos: nunca devolver passwordHash. */
 const select = {
-  id: true, email: true, name: true, role: true, active: true, mustChangePassword: true,
+  id: true, email: true, name: true, role: true, active: true, mustChangePassword: true, selfRegistered: true,
   lastLoginAt: true, createdAt: true, updatedAt: true,
 } satisfies Prisma.UserSelect;
 

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { Activity, Bell, BellRing, Building2, CalendarDays, ClipboardList, Cpu, FileBarChart, FileSpreadsheet, HardHat, LayoutDashboard, LogOut, MapPin, Menu, Tags, UserCog, UserRound, Users, Wrench, X, type LucideIcon } from 'lucide-react';
+import { Activity, Bell, BellRing, Building2, CalendarDays, ClipboardList, Cpu, FileBarChart, FileSpreadsheet, HardHat, LayoutDashboard, LogOut, MapPin, Menu, MessageSquare, Tags, UserCog, UserRound, Users, Wrench, X, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { ROLE_LABEL } from '../lib/api';
+import { AlertsBell } from './AlertsBell';
 
 const TITLES: Record<string, string> = {
   '/': 'Dashboard', '/usuarios': 'Usuarios', '/cuenta': 'Mi cuenta', '/clientes': 'Clientes', '/instalaciones': 'Instalaciones',
-  '/sistemas': 'Sistemas', '/catalogos': 'Catálogos', '/mantenimientos': 'Mantenimientos', '/calendario': 'Calendario', '/reportes': 'Reportes', '/seguimientos': 'Seguimientos', '/actividades': 'Actividades', '/notificaciones': 'Notificaciones', '/recordatorios': 'Recordatorios', '/importaciones': 'Importar Excel', '/tecnicos': 'Técnicos',
+  '/sistemas': 'Sistemas', '/catalogos': 'Catálogos', '/mantenimientos': 'Mantenimientos', '/calendario': 'Calendario', '/reportes': 'Reportes', '/seguimientos': 'Seguimientos', '/actividades': 'Actividades', '/notificaciones': 'Notificaciones', '/recordatorios': 'Recordatorios', '/importaciones': 'Importar Excel', '/tecnicos': 'Técnicos', '/chat': 'Chat',
 };
 const crumb = (p: string) =>
   TITLES[p] ?? (p.startsWith('/clientes/') ? 'Clientes / Detalle' : p.startsWith('/sistemas/') ? 'Sistemas / Detalle' : p.startsWith('/mantenimientos/') ? 'Mantenimientos / Detalle' : p.startsWith('/seguimientos/') ? 'Seguimientos / Detalle' : p.startsWith('/importaciones/') ? 'Importar Excel / Asistente' : p.startsWith('/reportes/') ? 'Reportes / Detalle' : '');
@@ -29,6 +30,7 @@ export function Layout() {
       { to: '/mantenimientos', label: 'Mantenimientos', icon: Wrench, show: true },
       { to: '/seguimientos', label: 'Seguimientos', icon: ClipboardList, show: true },
       { to: '/actividades', label: 'Actividades', icon: Activity, show: true },
+      { to: '/chat', label: 'Chat', icon: MessageSquare, show: true },
     ] },
     { title: 'Cartera', items: [
       { to: '/clientes', label: 'Clientes', icon: Building2, show: true },
@@ -96,6 +98,7 @@ export function Layout() {
             </nav>
           </div>
           <div className="flex items-center gap-3 text-sm">
+            <AlertsBell />
             <div className="hidden items-center gap-3 sm:flex">
               <span aria-hidden className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-900 font-display text-xs font-bold text-white ring-2 ring-teal-500/40">{initials(user?.name)}</span>
               <div className="text-right leading-tight">

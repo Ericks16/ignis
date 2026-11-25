@@ -1,3 +1,26 @@
+export interface ActionEmailData { title: string; intro: string; buttonLabel: string; url: string; footer: string }
+
+/** Correo transaccional simple (recuperación de contraseña, etc.) con la identidad de IGNIS. */
+export function renderActionEmail(d: ActionEmailData): { html: string; text: string } {
+  const e = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const html = `<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(d.title)}</title></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:16px 8px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#072c39;padding:18px 24px"><span style="font-size:24px;font-weight:700;letter-spacing:1px;color:#f05023">IGNIS</span> <span style="font-size:13px;color:#cbd5e1">Fire Protection</span></td></tr>
+<tr><td style="padding:24px">
+<h1 style="margin:0 0 12px;font-size:20px;color:#072c39">${e(d.title)}</h1>
+<p style="margin:0 0 20px;font-size:14px;line-height:1.5;color:#334155">${e(d.intro)}</p>
+<p style="margin:0"><a href="${e(d.url)}" style="display:inline-block;background:#f05023;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:600;font-size:14px">${e(d.buttonLabel)}</a></p>
+<p style="margin:16px 0 0;font-size:12px;color:#64748b;word-break:break-all">Si el botón no funciona, copie este enlace: ${e(d.url)}</p>
+</td></tr>
+<tr><td style="background:#f8fafc;padding:14px 24px;font-size:12px;color:#64748b">${e(d.footer)}</td></tr>
+</table></td></tr></table></body></html>`;
+  const text = [d.title, '', d.intro, '', `${d.buttonLabel}: ${d.url}`, '', d.footer].join('\n');
+  return { html, text };
+}
+
 export interface ReminderEmailData {
   entityLabel: 'Seguimiento' | 'Mantenimiento';
   title: string;

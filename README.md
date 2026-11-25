@@ -29,7 +29,7 @@ El primer administrador debe cambiar su contraseña al ingresar.
 
 ## Pruebas
 ```powershell
-npm test            # PostgreSQL temporal + migraciones + 170 pruebas (unitarias, integración, seguridad)
+npm test            # PostgreSQL temporal + migraciones + 188 pruebas (unitarias, integración, seguridad)
 npm run test:cov    # con cobertura
 npm run test:e2e    # Playwright con Microsoft Edge instalado, entorno temporal aislado
 ```

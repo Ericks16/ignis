@@ -18,6 +18,6 @@ export function createEmailProvider(): EmailProvider {
 @Module({
   controllers: [NotificationsController, ReminderSettingsController, CronController],
   providers: [RemindersService, ReminderSettingsService, { provide: EMAIL_PROVIDER, useFactory: createEmailProvider }],
-  exports: [RemindersService],
+  exports: [RemindersService, ReminderSettingsService],
 })
 export class RemindersModule {}
